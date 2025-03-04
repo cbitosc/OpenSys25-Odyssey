@@ -1,2 +1,1 @@
-Odyssey 25
-opensys
+Odyssey 2025
