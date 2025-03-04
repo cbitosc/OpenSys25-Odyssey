@@ -127,7 +127,7 @@ const Home = () => {
                   {userDet?.CL > 16 ? (
                     <span>Congratulations on completing The Odyssey!</span>
                   ) : (
-                    <span>The Odyssey unfolds at 11 AM</span>
+                    <span>The Odyssey unfolds at 11:30 AM</span>
                   )}
                 </div>
               )}
