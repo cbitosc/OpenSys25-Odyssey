@@ -2,70 +2,101 @@ import React, { useState, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 import { useTheme } from "next-themes";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, Hourglass, HelpCircle } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
+import { ArrowRight } from "lucide-react";
+import { useToast } from "../ui/use-toast";
 
-const HourglassPuzzleLevel = ({ levelNumber, onComplete, nextLevelNumber }) => {
-  // State management
+const CipherPuzzleLevel = ({ levelNumber, onComplete, nextLevelNumber }) => {
   const [inputValue, setInputValue] = useState("");
   const [isHelpModalOpen, setHelpModalOpen] = useState(false);
-  const [isHourglassRunning, setIsHourglassRunning] = useState(false);
-  const [message, setMessage] = useState("Measure exactly 15 minutes using the 7 and 11-minute hourglasses!");
-  const [gameState, setGameState] = useState({
-    sevenMinuteTimer: 7,
-    elevenMinuteTimer: 11,
-    runningGlasses: []
-  });
+  const [currentWord, setCurrentWord] = useState("14 13 4 11 18 22 18");
+  const [message, setMessage] = useState("Transform the numbers to spell 'OpenSys'");
   const [isSuccess, setIsSuccess] = useState(false);
   
-  // Hooks
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
 
-  // Game logic timer
-  useEffect(() => {
-    let timer;
-    if (isHourglassRunning) {
-      timer = setInterval(() => {
-        setGameState(prev => {
-          const updatedState = { ...prev };
-          
-          // Decrement running glasses
-          updatedState.runningGlasses = prev.runningGlasses.map(glass => {
-            const remainingTime = glass === '7min' 
-              ? Math.max(0, updatedState.sevenMinuteTimer - 1)
-              : Math.max(0, updatedState.elevenMinuteTimer - 1);
-            
-            if (glass === '7min') {
-              updatedState.sevenMinuteTimer = remainingTime;
-            } else {
-              updatedState.elevenMinuteTimer = remainingTime;
-            }
-            
-            return remainingTime > 0 ? glass : null;
-          }).filter(Boolean);
+  const letterToNumber = (letter) => {
+    return letter.toUpperCase().charCodeAt(0) - 64;
+  };
 
-          // Check win condition (exactly 15 minutes)
-          if (updatedState.sevenMinuteTimer === 0 && updatedState.elevenMinuteTimer === 0) {
-            setIsSuccess(true);
-            setIsHourglassRunning(false);
-            setMessage("Congratulations! You've measured exactly 15 minutes!");
-          }
+  const numberToLetter = (num) => {
+    return num >= 1 && num <= 26 
+      ? String.fromCharCode(num + 64) 
+      : num.toString();
+  };
 
-          return updatedState;
-        });
-      }, 1000);
+  const isNumeric = (value) => {
+    return value.split(' ').every(item => !isNaN(parseInt(item)));
+  };
+
+  const isAlphabetic = (value) => {
+    return value.split(' ').every(item => isNaN(parseInt(item)));
+  };
+
+  const cipherCommands = {
+    '@': (word) => {
+      if (!isNumeric(word)) {
+        throw new Error("Numeric cipher can only be applied to numbers");
+      }
+      return word.split(' ').map(item => {
+        const num = parseInt(item);
+        return numberToLetter(num);
+      }).join(' ');
+    },
+    '$': (word) => {
+      if (isNumeric(word)) {
+        return word.split(' ').map((item, index) => {
+          const num = parseInt(item);
+          const transformed = index % 2 === 0 ? (num - 1) : (num + 1);
+          return numberToLetter(transformed);
+        }).join(' ');
+      } else if (isAlphabetic(word)) {
+        return word.split(' ').map((item, index) => {
+          const num = letterToNumber(item);
+          const transformed = index % 2 === 0 ? (num - 1) : (num + 1);
+          return numberToLetter(transformed);
+        }).join(' ');
+      } else {
+        throw new Error("Alternating cipher requires consistent input type");
+      }
+    },
+    '#': (word) => {
+      if (isNumeric(word)) {
+        return word.split(' ').map(item => {
+          const num = parseInt(item);
+          const transformed = num + 2;
+          return numberToLetter(transformed);
+        }).join(' ');
+      } else if (isAlphabetic(word)) {
+        return word.split(' ').map(item => {
+          const num = letterToNumber(item);
+          const transformed = num + 2;
+          return numberToLetter(transformed);
+        }).join(' ');
+      } else {
+        throw new Error("Add 2 cipher requires consistent input type");
+      }
+    },
+    '%': (word) => {
+      return word.split(' ').reverse().join(' ');
+    },
+    '&': (word) => {
+      return word.split(' ').sort((a, b) => {
+        const convertToSortValue = (item) => {
+          const num = parseInt(item);
+          return !isNaN(num) ? num : letterToNumber(item);
+        };
+        return convertToSortValue(a) - convertToSortValue(b);
+      }).join(' ');
     }
+  };
 
-    return () => clearInterval(timer);
-  }, [isHourglassRunning]);
-
-  // Success effect
   useEffect(() => {
-    if (isSuccess) {
+    if (currentWord === "O P E N S Y S") {
+      setIsSuccess(true);
       toast({
-        title: "Vault Solved!",
-        description: "You've successfully measured exactly 15 minutes!",
+        title: "Level Completed!",
+        description: "You've successfully transformed the code!",
         variant: "success",
         className: "fixed bottom-12 left-1/2 transform -translate-x-1/2 z-50 bg-green-500 text-white opacity-100 border-0 shadow-lg",
       });
@@ -74,21 +105,8 @@ const HourglassPuzzleLevel = ({ levelNumber, onComplete, nextLevelNumber }) => {
         onComplete(nextLevelNumber);
       }, 2000);
     }
-  }, [isSuccess, nextLevelNumber, onComplete, toast]);
+  }, [currentWord, nextLevelNumber, onComplete, toast]);
 
-  // Reset game logic
-  const resetGame = () => {
-    setGameState({
-      sevenMinuteTimer: 7,
-      elevenMinuteTimer: 11,
-      runningGlasses: []
-    });
-    setIsHourglassRunning(false);
-    setIsSuccess(false);
-    setMessage("Measure exactly 15 minutes using the 7 and 11-minute hourglasses!");
-  };
-
-  // Command handling
   const handleInputChange = (e) => {
     setInputValue(e.target.value);
   };
@@ -100,17 +118,38 @@ const HourglassPuzzleLevel = ({ levelNumber, onComplete, nextLevelNumber }) => {
   };
 
   const handleCommandSubmit = () => {
-    const flipSevenMatch = inputValue.match(/^\/flip\s*7$/i);
-    const flipElevenMatch = inputValue.match(/^\/flip\s*11$/i);
+    const cipherMatch = inputValue.match(/^\/cipher\s*([%@#$&])\s*(\w*)$/i);
     const resetMatch = inputValue.match(/^\/reset$/i);
     const helpMatch = inputValue.match(/^\/help$/i);
     const themeMatch = inputValue.match(/^\/theme\s+(dark|light)$/i);
-
-    if (resetMatch) {
-      resetGame();
+    
+    if (cipherMatch) {
+      const [, command, param] = cipherMatch;
+      if (cipherCommands[command]) {
+        try {
+          const newWord = cipherCommands[command](currentWord);
+          setCurrentWord(newWord);
+          
+          toast({
+            title: "Cipher Applied",
+            description: `Applied /cipher ${command} command`,
+            variant: "default",
+            className: "fixed bottom-12 left-1/2 transform -translate-x-1/2 z-50 bg-white dark:bg-[#2D1B4B] opacity-100 shadow-lg",
+          });
+        } catch (error) {
+          toast({
+            title: "Cipher Error",
+            description: error.message,
+            variant: "destructive",
+            className: "fixed bottom-12 left-1/2 transform -translate-x-1/2 z-50 bg-red-500 text-white opacity-100 shadow-lg",
+          });
+        }
+      }
+    } else if (resetMatch) {
+      setCurrentWord("14 13 4 11 18 22 18");
       toast({
-        title: "Game Reset",
-        description: "Hourglasses reset to initial state",
+        title: "Level Reset",
+        description: "Restored initial number sequence",
         variant: "default",
         className: "fixed bottom-12 left-1/2 transform -translate-x-1/2 z-50 bg-white dark:bg-[#2D1B4B] opacity-100 shadow-lg",
       });
@@ -124,32 +163,6 @@ const HourglassPuzzleLevel = ({ levelNumber, onComplete, nextLevelNumber }) => {
         description: `Theme set to ${newTheme} mode`,
         variant: "default",
         className: "fixed bottom-12 left-1/2 transform -translate-x-1/2 z-50 bg-white dark:bg-[#2D1B4B] opacity-100 shadow-lg",
-      });
-    } else if (flipSevenMatch) {
-      setGameState(prev => {
-        const newState = { ...prev };
-        if (!prev.runningGlasses.includes('7min')) {
-          // Start 7-minute hourglass if not already running
-          newState.runningGlasses.push('7min');
-          setIsHourglassRunning(true);
-        } else {
-          // Flip 7-minute hourglass back to 7 minutes
-          newState.sevenMinuteTimer = 7;
-        }
-        return newState;
-      });
-    } else if (flipElevenMatch) {
-      setGameState(prev => {
-        const newState = { ...prev };
-        if (!prev.runningGlasses.includes('11min')) {
-          // Start 11-minute hourglass if not already running
-          newState.runningGlasses.push('11min');
-          setIsHourglassRunning(true);
-        } else {
-          // Flip 11-minute hourglass back to 11 minutes
-          newState.elevenMinuteTimer = 11;
-        }
-        return newState;
       });
     } else {
       toast({
@@ -165,14 +178,13 @@ const HourglassPuzzleLevel = ({ levelNumber, onComplete, nextLevelNumber }) => {
 
   return (
     <div className="flex flex-col items-center mt-8 max-w-4xl mx-auto px-4">
-      {/* Header */}
       <motion.h1 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
         className="px-6 py-3 text-2xl font-bold text-[#2D1B4B] dark:text-[#1A0F2E] bg-gradient-to-r from-[#F9DC34] to-[#F5A623] rounded-full shadow-lg"
       >
-        Level {levelNumber}: Hourglass Puzzle
+        Level 13
       </motion.h1>
       
       <motion.p 
@@ -184,32 +196,24 @@ const HourglassPuzzleLevel = ({ levelNumber, onComplete, nextLevelNumber }) => {
         {message}
       </motion.p>
 
-      {/* Hourglass Status */}
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.6, delay: 0.3 }}
-        className="flex gap-4 mb-8"
+        className="bg-white dark:bg-[#2D1B4B]/40 rounded-2xl p-6 shadow-lg backdrop-blur-sm border border-purple-200 dark:border-purple-700/30 w-full max-w-md"
       >
-        <div className="bg-white dark:bg-[#2D1B4B]/40 rounded-xl p-4 shadow-lg border border-purple-200 dark:border-purple-700/30">
-          <div className="flex items-center">
-            <Hourglass className="mr-2 text-purple-700 dark:text-purple-300" />
-            <span className="font-medium text-purple-900 dark:text-[#F9DC34]">
-              7-min Hourglass: {gameState.sevenMinuteTimer} mins
-            </span>
+        <div className="min-h-48 flex flex-col items-center justify-center space-y-4">
+          <div className="text-center text-purple-700 dark:text-purple-300">
+            <span className="font-mono text-xl">Current Sequence:</span>
+            <p className="mt-2 text-2xl font-bold">{currentWord}</p>
           </div>
-        </div>
-        <div className="bg-white dark:bg-[#2D1B4B]/40 rounded-xl p-4 shadow-lg border border-purple-200 dark:border-purple-700/30">
-          <div className="flex items-center">
-            <Hourglass className="mr-2 text-purple-700 dark:text-purple-300" />
-            <span className="font-medium text-purple-900 dark:text-[#F9DC34]">
-              11-min Hourglass: {gameState.elevenMinuteTimer} mins
-            </span>
+          <div className="text-center text-purple-700 dark:text-purple-300">
+            <span className="font-mono text-xl">Target:</span>
+            <p className="mt-2 text-2xl font-bold">OpenSys</p>
           </div>
         </div>
       </motion.div>
       
-      {/* Help text */}
       <motion.span
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -220,7 +224,6 @@ const HourglassPuzzleLevel = ({ levelNumber, onComplete, nextLevelNumber }) => {
         Type <span className="font-mono bg-purple-100 dark:bg-purple-900/30 px-2 py-1 rounded">/help</span> to get commands and hints
       </motion.span>
 
-      {/* Input and command button */}
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -232,7 +235,7 @@ const HourglassPuzzleLevel = ({ levelNumber, onComplete, nextLevelNumber }) => {
           value={inputValue}
           onChange={handleInputChange}
           onKeyPress={handleKeyPress}
-          placeholder="Enter command..."
+          placeholder="Enter cipher command..."
           className="border-purple-300 dark:border-purple-600/50 bg-white dark:bg-[#1A0F2E]/70 shadow-inner focus:ring-[#F5A623] focus:border-[#F9DC34]"
         />
         <button 
@@ -245,7 +248,6 @@ const HourglassPuzzleLevel = ({ levelNumber, onComplete, nextLevelNumber }) => {
         </button>
       </motion.div>
 
-      {/* Help Modal */}
       <AnimatePresence>
         {isHelpModalOpen && (
           <motion.div 
@@ -264,38 +266,45 @@ const HourglassPuzzleLevel = ({ levelNumber, onComplete, nextLevelNumber }) => {
                 <h2 className="text-2xl font-bold mb-4 text-purple-800 dark:text-[#F9DC34]">Available Commands:</h2>
                 <div className="space-y-1 mb-6">
                   <div className="bg-purple-50 dark:bg-purple-900/20 p-3 rounded-lg border-l-4 border-[#F5A623]">
-                    <span className="font-bold text-purple-700 dark:text-purple-300">/flip 7</span>
-                    <p className="mt-1 text-gray-600 dark:text-gray-300">Start or reset the 7-minute hourglass.</p>
+                    <span className="font-bold text-purple-700 dark:text-purple-300">/cipher @</span>
+                    <p className="mt-1 text-gray-600 dark:text-gray-300">Convert numbers to letters (A=1, B=2, etc.)</p>
+                  </div>
+                  
+                  
+                  
+                  
+                  
+                  <div className="bg-purple-50 dark:bg-purple-900/20 p-3 rounded-lg border-l-4 border-[#F5A623]">
+                    <span className="font-bold text-purple-700 dark:text-purple-300">/cipher %</span>
+                    <p className="mt-1 text-gray-600 dark:text-gray-300">Reverse the order of numbers</p>
+                  </div>
+
+                  <div className="bg-purple-50 dark:bg-purple-900/20 p-3 rounded-lg border-l-4 border-[#F5A623]">
+                    <span className="font-bold text-purple-700 dark:text-purple-300">/cipher #</span>
+                    <p className="mt-1 text-gray-600 dark:text-gray-300">Add 2 to all numbers</p>
                   </div>
                   
                   <div className="bg-purple-50 dark:bg-purple-900/20 p-3 rounded-lg border-l-4 border-[#F5A623]">
-                    <span className="font-bold text-purple-700 dark:text-purple-300">/flip 11</span>
-                    <p className="mt-1 text-gray-600 dark:text-gray-300">Start or reset the 11-minute hourglass.</p>
+                    <span className="font-bold text-purple-700 dark:text-purple-300">/cipher &</span>
+                    <p className="mt-1 text-gray-600 dark:text-gray-300">Sort numbers in ascending order</p>
+                  </div>
+
+                  <div className="bg-purple-50 dark:bg-purple-900/20 p-3 rounded-lg border-l-4 border-[#F5A623]">
+                    <span className="font-bold text-purple-700 dark:text-purple-300">/cipher $</span>
+                    <p className="mt-1 text-gray-600 dark:text-gray-300">Alternating +1 and -1 transformation</p>
                   </div>
                   
                   <div className="bg-purple-50 dark:bg-purple-900/20 p-3 rounded-lg border-l-4 border-[#F5A623]">
                     <span className="font-bold text-purple-700 dark:text-purple-300">/reset</span>
-                    <p className="mt-1 text-gray-600 dark:text-gray-300">Reset both hourglasses to initial state.</p>
-                  </div>
-                  
-                  <div className="bg-purple-50 dark:bg-purple-900/20 p-3 rounded-lg border-l-4 border-[#F5A623]">
-                    <span className="font-bold text-purple-700 dark:text-purple-300">/theme</span>{" "}
-                    <span className="text-blue-600 dark:text-blue-300">[dark|light]</span>
-                    <p className="mt-1 text-gray-600 dark:text-gray-300">Change the theme to dark or light.</p>
+                    <p className="mt-1 text-gray-600 dark:text-gray-300">Reset to the initial number sequence</p>
                   </div>
                 </div>
                 
-                <h3 className="text-xl font-bold mb-2 text-purple-800 dark:text-[#F9DC34]">How to Play:</h3>
-                <ul className="list-disc pl-5 space-y-1 text-gray-600 dark:text-gray-300">
-                  <li>Your goal is to measure exactly 15 minutes</li>
-                  <li>You have two hourglasses: 7-minute and 11-minute</li>
-                  <li>Use /flip commands to start and reset hourglasses</li>
-                </ul>
-                
                 <h3 className="text-xl font-bold mt-4 mb-2 text-purple-800 dark:text-[#F9DC34]">Hint:</h3>
                 <p className="text-gray-600 dark:text-gray-300 italic">
-                  Solve the puzzle by strategically flipping the hourglasses to measure exactly 15 minutes.
-                  Remember: The 7-minute and 11-minute hourglasses can be combined creatively!
+                  The solution involves multiple steps
+                  Use other commands to manipulate the sequence
+                  Experiment with combining commands in different orders
                 </p>
               </div>
               
@@ -315,4 +324,4 @@ const HourglassPuzzleLevel = ({ levelNumber, onComplete, nextLevelNumber }) => {
   );
 };
 
-export default HourglassPuzzleLevel;
+export default CipherPuzzleLevel;
