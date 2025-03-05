@@ -1,202 +1,98 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Input } from "@/components/ui/input";
 import { useTheme } from "next-themes";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, Gamepad2, Pause, Play, RotateCcw } from "lucide-react";
+import { HelpCircle, Volume2, Play, Music } from "lucide-react";
 import { useToast } from "../ui/use-toast";
 
-// Tetromino shapes
-const SHAPES = {
-  I: [
-    [0,0,0,0],
-    [1,1,1,1],
-    [0,0,0,0],
-    [0,0,0,0]
-  ],
-  O: [
-    [1,1],
-    [1,1]
-  ],
-  T: [
-    [0,1,0],
-    [1,1,1],
-    [0,0,0]
-  ],
-  L: [
-    [0,0,1],
-    [1,1,1],
-    [0,0,0]
-  ],
-  J: [
-    [1,0,0],
-    [1,1,1],
-    [0,0,0]
-  ],
-  S: [
-    [0,1,1],
-    [1,1,0],
-    [0,0,0]
-  ],
-  Z: [
-    [1,1,0],
-    [0,1,1],
-    [0,0,0]
-  ]
-};
-
-const COLORS = {
-  I: 'cyan',
-  O: 'yellow',
-  T: 'purple',
-  L: 'orange',
-  J: 'blue',
-  S: 'green',
-  Z: 'red'
-};
-
-const CommandTetris = ({ levelNumber, onComplete, nextLevelNumber }) => {
-  // Game state
-  const [board, setBoard] = useState(Array(20).fill().map(() => Array(10).fill(0)));
-  const [currentPiece, setCurrentPiece] = useState(null);
-  const [currentPosition, setCurrentPosition] = useState({ x: 0, y: 0 });
-  const [isGameOver, setIsGameOver] = useState(false);
-  const [score, setScore] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
-
-  // Input and UI state
+const Level15 = ({ onComplete }) => {
   const [inputValue, setInputValue] = useState("");
   const [isHelpModalOpen, setHelpModalOpen] = useState(false);
-  const [message, setMessage] = useState("Welcome to Command Tetris!");
-
-  // Refs and hooks
-  const gameLoopRef = useRef(null);
+  const [message, setMessage] = useState("Listen to the sequence and replay it!");
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [userSequence, setUserSequence] = useState([]);
+  const [playbackIndex, setPlaybackIndex] = useState(-1);
+  const [isSuccess, setIsSuccess] = useState(false);
+  
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
 
-  // Generate a new random piece
-  const getRandomPiece = useCallback(() => {
-    const shapeKeys = Object.keys(SHAPES);
-    const randomShape = shapeKeys[Math.floor(Math.random() * shapeKeys.length)];
-    return {
-      shape: SHAPES[randomShape],
-      color: COLORS[randomShape],
-      name: randomShape
+  const audioContextRef = useRef(null);
+  const oscillatorRef = useRef(null);
+
+  const targetSequence = ['C', 'E', 'G', 'A', 'B', 'F', 'D'];
+  
+  const noteFrequencies = {
+    'C': 130.81, // C3
+    'D': 196.00, // G3
+    'E': 261.63, // C4
+    'F': 349.23, // F4
+    'G': 440.00, // A4
+    'A': 587.33, // D5
+    'B': 783.99, // G5
+  };
+  
+
+  useEffect(() => {
+    audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    return () => {
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+      }
     };
   }, []);
 
-  // Initialize game
-  const initializeGame = useCallback(() => {
-    const newBoard = Array(20).fill().map(() => Array(10).fill(0));
-    setBoard(newBoard);
-    setCurrentPiece(getRandomPiece());
-    setCurrentPosition({ x: 5, y: 0 });
-    setScore(0);
-    setIsGameOver(false);
-    setIsPaused(false);
-  }, [getRandomPiece]);
-
-  // Check if move is valid
-  const isValidMove = useCallback((piece, offsetX, offsetY) => {
-    for (let y = 0; y < piece.shape.length; y++) {
-      for (let x = 0; x < piece.shape[y].length; x++) {
-        if (piece.shape[y][x]) {
-          const newX = currentPosition.x + x + offsetX;
-          const newY = currentPosition.y + y + offsetY;
-
-          if (
-            newX < 0 || 
-            newX >= 10 || 
-            newY >= 20 || 
-            (newY >= 0 && board[newY][newX])
-          ) {
-            return false;
-          }
-        }
-      }
-    }
-    return true;
-  }, [board, currentPosition]);
-
-  // Rotate piece
-  const rotatePiece = useCallback(() => {
-    if (!currentPiece) return;
-
-    const rotatedShape = currentPiece.shape[0].map((_, index) => 
-      currentPiece.shape.map(row => row[index]).reverse()
-    );
-
-    const rotatedPiece = { ...currentPiece, shape: rotatedShape };
-
-    if (isValidMove(rotatedPiece, 0, 0)) {
-      setCurrentPiece(rotatedPiece);
-      setMessage("Piece rotated!");
-    } else {
-      setMessage("Cannot rotate piece!");
-    }
-  }, [currentPiece, isValidMove]);
-
-  // Move piece
-  const movePiece = useCallback((dx, dy) => {
-    if (!currentPiece) return;
-
-    if (isValidMove(currentPiece, dx, dy)) {
-      setCurrentPosition(prev => ({
-        x: prev.x + dx,
-        y: prev.y + dy
-      }));
-    } else if (dy > 0) {
-      // Piece cannot move down - lock it in place
-      const newBoard = [...board];
-      for (let y = 0; y < currentPiece.shape.length; y++) {
-        for (let x = 0; x < currentPiece.shape[y].length; x++) {
-          if (currentPiece.shape[y][x]) {
-            const boardY = currentPosition.y + y;
-            const boardX = currentPosition.x + x;
-            
-            if (boardY >= 0) {
-              newBoard[boardY][boardX] = currentPiece.color;
-            }
-          }
-        }
-      }
-
-      // Check for completed lines
-      const clearedBoard = newBoard.filter(row => !row.every(cell => cell));
-      const linesToClear = 20 - clearedBoard.length;
-      const newLines = Array(linesToClear).fill(Array(10).fill(0));
-      const updatedBoard = [...newLines, ...clearedBoard];
-
-      // Update score
-      const scoreIncrease = [0, 40, 100, 300, 1200][linesToClear] || 0;
-      setScore(prev => prev + scoreIncrease);
-
-      setBoard(updatedBoard);
-      
-      // Spawn new piece
-      const newPiece = getRandomPiece();
-      setCurrentPiece(newPiece);
-      setCurrentPosition({ x: 5, y: 0 });
-
-      // Check game over
-      if (!isValidMove(newPiece, 0, 0)) {
-        setIsGameOver(true);
-      }
-    }
-  }, [board, currentPiece, currentPosition, isValidMove, getRandomPiece]);
-
-  // Game loop
   useEffect(() => {
-    if (isGameOver || isPaused) return;
+    if (isSuccess) {
+      toast({
+        title: "Level Completed!",
+        description: "You've successfully matched the musical sequence!",
+        variant: "success",
+        className: "fixed bottom-12 left-1/2 transform -translate-x-1/2 z-50 bg-green-500 text-white opacity-100 border-0 shadow-lg",
+      });
+      
+      setTimeout(() => {
+        onComplete(7);
+      }, 2000);
+    }
+  }, [isSuccess, onComplete, toast]);
 
-    const dropPiece = () => {
-      movePiece(0, 1);
-    };
+  const playNote = (note, duration = 0.5) => {
+    if (!audioContextRef.current) return;
 
-    gameLoopRef.current = setInterval(dropPiece, 1000);
-    return () => clearInterval(gameLoopRef.current);
-  }, [movePiece, isGameOver, isPaused]);
+    const oscillator = audioContextRef.current.createOscillator();
+    const gainNode = audioContextRef.current.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContextRef.current.destination);
+    
+    oscillator.type = 'triangle';
+    oscillator.frequency.setValueAtTime(noteFrequencies[note], audioContextRef.current.currentTime);
+    
+    gainNode.gain.setValueAtTime(0, audioContextRef.current.currentTime);
+    gainNode.gain.linearRampToValueAtTime(0.5, audioContextRef.current.currentTime + 0.1);
+    gainNode.gain.linearRampToValueAtTime(0, audioContextRef.current.currentTime + duration);
+    
+    oscillator.start();
+    oscillator.stop(audioContextRef.current.currentTime + duration);
+  };
 
-  // Command handling
+  const playSequence = async () => {
+    if (isPlaying) return;
+    setIsPlaying(true);
+    setMessage("Playing sequence...");
+
+    for (let i = 0; i < targetSequence.length; i++) {
+      setPlaybackIndex(i);
+      playNote(targetSequence[i]);
+      await new Promise(resolve => setTimeout(resolve, 700));
+    }
+
+    setPlaybackIndex(-1);
+    setIsPlaying(false);
+    setMessage("Now try to replay the sequence!");
+  };
+
   const handleInputChange = (e) => {
     setInputValue(e.target.value);
   };
@@ -208,114 +104,158 @@ const CommandTetris = ({ levelNumber, onComplete, nextLevelNumber }) => {
   };
 
   const handleCommandSubmit = () => {
-    if (isGameOver) {
-      initializeGame();
-      return;
-    }
+    const resetMatch = inputValue.match(/^\/reset$/i);
+    const helpMatch = inputValue.match(/^\/help$/i);
+    const themeMatch = inputValue.match(/^\/theme\s+(dark|light)$/i);
+    const playMatch = inputValue.match(/^\/play\s+([A-G]\s*)+$/);
+    const listenMatch = inputValue.match(/^\/listen$/);
 
-    const moveLeftCommand = inputValue.match(/^\/left$/i);
-    const moveRightCommand = inputValue.match(/^\/right$/i);
-    const moveDownCommand = inputValue.match(/^\/down$/i);
-    const rotateCommand = inputValue.match(/^\/rotate$/i);
-    const pauseCommand = inputValue.match(/^\/pause$/i);
-    const resetCommand = inputValue.match(/^\/reset$/i);
-    const helpCommand = inputValue.match(/^\/help$/i);
-    const themeCommand = inputValue.match(/^\/theme\s+(dark|light)$/i);
-
-    if (moveLeftCommand) {
-      movePiece(-1, 0);
-    } else if (moveRightCommand) {
-      movePiece(1, 0);
-    } else if (moveDownCommand) {
-      movePiece(0, 1);
-    } else if (rotateCommand) {
-      rotatePiece();
-    } else if (pauseCommand) {
-      setIsPaused(prev => !prev);
-    } else if (resetCommand) {
-      initializeGame();
-    } else if (helpCommand) {
+    if (resetMatch) {
+      resetGame();
+      toast({
+        title: "Level Reset",
+        description: "The game has been reset to its initial state",
+        variant: "default",
+        className: "fixed bottom-12 left-1/2 transform -translate-x-1/2 z-50 bg-white dark:bg-[#2D1B4B] opacity-100 shadow-lg",
+      });
+    } else if (helpMatch) {
       setHelpModalOpen(true);
-    } else if (themeCommand) {
-      const newTheme = themeCommand[1];
+    } else if (themeMatch) {
+      const newTheme = themeMatch[1];
       setTheme(newTheme);
+      toast({
+        title: "Theme Changed",
+        description: `Theme set to ${newTheme} mode`,
+        variant: "default",
+        className: "fixed bottom-12 left-1/2 transform -translate-x-1/2 z-50 bg-white dark:bg-[#2D1B4B] opacity-100 shadow-lg",
+      });
+    } else if (playMatch) {
+      const sequence = inputValue.slice(6).split(/\s+/);
+      setUserSequence(sequence);
+      
+      sequence.forEach((note, index) => {
+        setTimeout(() => {
+          playNote(note);
+        }, index * 700);
+      });
+
+      const isCorrect = sequence.join('') === targetSequence.join('');
+      
+      if (isCorrect) {
+        setMessage("Perfect! You've matched the sequence! 🎵");
+        setIsSuccess(true);
+      } else {
+        toast({
+          title: "Incorrect Sequence",
+          description: "Not quite right. Try listening again! 🎵",
+          variant: "destructive",
+          className: "fixed bottom-12 left-1/2 transform -translate-x-1/2 z-50 bg-red-500 text-white opacity-100 shadow-lg",
+        });
+      }
+    } else if (listenMatch) {
+      playSequence();
     } else {
       toast({
         title: "Unknown Command",
-        description: "Type /help for available commands",
+        description: "Type /help to see available commands",
         variant: "destructive",
+        className: "fixed bottom-12 left-1/2 transform -translate-x-1/2 z-50 bg-red-500 text-white opacity-100 shadow-lg",
       });
     }
-
+    
     setInputValue("");
   };
 
-  // Render game board
-  const renderBoard = () => {
-    const boardWithCurrentPiece = board.map(row => [...row]);
-
-    if (currentPiece) {
-      for (let y = 0; y < currentPiece.shape.length; y++) {
-        for (let x = 0; x < currentPiece.shape[y].length; x++) {
-          if (currentPiece.shape[y][x]) {
-            const boardY = currentPosition.y + y;
-            const boardX = currentPosition.x + x;
-            
-            if (boardY >= 0 && boardY < 20 && boardX >= 0 && boardX < 10) {
-              boardWithCurrentPiece[boardY][boardX] = currentPiece.color;
-            }
-          }
-        }
-      }
-    }
-
-    return boardWithCurrentPiece.map((row, rowIndex) => (
-      <div key={rowIndex} className="flex">
-        {row.map((cell, cellIndex) => (
-          <div 
-            key={cellIndex} 
-            className={`w-6 h-6 border border-gray-200 
-              ${cell ? `bg-${cell}-500` : 'bg-gray-100 dark:bg-gray-800'}`}
-          />
-        ))}
-      </div>
-    ));
+  const resetGame = () => {
+    setMessage("Listen to the sequence and replay it!");
+    setIsPlaying(false);
+    setUserSequence([]);
+    setPlaybackIndex(-1);
+    setIsSuccess(false);
   };
 
   return (
     <div className="flex flex-col items-center mt-8 max-w-4xl mx-auto px-4">
-      {/* Game Header */}
       <motion.h1 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
         className="px-6 py-3 text-2xl font-bold text-[#2D1B4B] dark:text-[#1A0F2E] bg-gradient-to-r from-[#F9DC34] to-[#F5A623] rounded-full shadow-lg"
       >
-        Command Tetris
+        Level 15
       </motion.h1>
+      
+      <motion.p 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.6, delay: 0.2 }}
+        className="mt-8 text-xl font-semibold mb-4 text-center text-purple-900 dark:text-[#F9DC34]"
+      >
+        {message}
+      </motion.p>
 
-      {/* Game Status */}
-      <div className="flex items-center justify-between w-full max-w-md mt-4">
-        <span className="text-lg font-semibold">
-          Score: {score}
-        </span>
-        {isPaused && (
-          <span className="text-yellow-600 font-bold">
-            PAUSED
-          </span>
-        )}
-        {isGameOver && (
-          <span className="text-red-600 font-bold">
-            GAME OVER
-          </span>
-        )}
-      </div>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.6, delay: 0.3 }}
+        className="bg-white dark:bg-[#2D1B4B]/40 rounded-2xl p-6 shadow-lg backdrop-blur-sm border border-purple-200 dark:border-purple-700/30 w-full max-w-md"
+      >
+        <div className="mb-8 flex gap-2 justify-center">
+          {targetSequence.map((note, index) => (
+            <motion.div
+              key={index}
+              className={`w-12 h-32 rounded-b-lg relative ${
+                playbackIndex === index 
+                  ? 'bg-purple-500' 
+                  : 'bg-gray-300 dark:bg-gray-700'
+              }`}
+              animate={{
+                scale: playbackIndex === index ? 1.1 : 1,
+                backgroundColor: playbackIndex === index ? '#8B5CF6' : '#D1D5DB'
+              }}
+            >
+              {playbackIndex === index && (
+                <motion.div
+                  className="absolute bottom-0 w-full"
+                  animate={{ height: ['0%', '100%', '0%'] }}
+                  transition={{ duration: 0.5, ease: 'easeInOut' }}
+                />
+              )}
+            </motion.div>
+          ))}
+        </div>
 
-      {/* Game Board */}
-      <div className="mt-4 border-4 border-purple-700 dark:border-purple-300">
-        {renderBoard()}
-      </div>
+        <div className="flex justify-center mb-4">
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={playSequence}
+            disabled={isPlaying}
+            className={`px-6 py-3 rounded-lg bg-purple-600 text-white flex items-center gap-2 ${
+              isPlaying ? 'opacity-50 cursor-not-allowed' : 'hover:bg-purple-700'
+            }`}
+          >
+            <Volume2 className="w-5 h-5" />
+            Listen Again
+          </motion.button>
+        </div>
+      </motion.div>
+      
+      <motion.span
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.6, delay: 0.5 }}
+        className="mx-10 my-6 text-center cursor-pointer text-purple-700 dark:text-purple-300 hover:text-[#F5A623] dark:hover:text-[#F9DC34] transition-colors"
+        onClick={() => setHelpModalOpen(true)}
+      >
+        Type <span className="font-mono bg-purple-100 dark:bg-purple-900/30 px-2 py-1 rounded">/help</span> to get commands and hints
+      </motion.span>
 
-      {/* Input Area */}
       <motion.div 
-        className="flex gap-2 w-full max-w-md mt-4"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.6 }}
+        className="flex gap-2 w-full max-w-md"
       >
         <Input
           type="text"
@@ -323,37 +263,85 @@ const CommandTetris = ({ levelNumber, onComplete, nextLevelNumber }) => {
           onChange={handleInputChange}
           onKeyPress={handleKeyPress}
           placeholder="Enter command..."
-          className="border-purple-300 dark:border-purple-600/50"
+          className="border-purple-300 dark:border-purple-600/50 bg-white dark:bg-[#1A0F2E]/70 shadow-inner focus:ring-[#F5A623] focus:border-[#F9DC34]"
         />
         <button 
           onClick={handleCommandSubmit}
-          className="bg-gradient-to-r from-[#F9DC34] to-[#F5A623] p-2 rounded-lg"
+          className="bg-gradient-to-r from-[#F9DC34] to-[#F5A623] hover:from-[#FFE55C] hover:to-[#FFBD4A] p-2 rounded-lg shadow-md transition-transform hover:scale-105"
         >
-          <ArrowRight className="w-5 h-5" />
+          <div className="w-6 h-6 flex items-center justify-center">
+            <Music className="w-5 h-5 text-purple-900" />
+          </div>
         </button>
       </motion.div>
 
-      {/* Game Help Modal */}
       <AnimatePresence>
         {isHelpModalOpen && (
-          <motion.div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
-            <motion.div className="bg-white dark:bg-[#2D1B4B] rounded-xl p-6 max-w-md">
-              <h2 className="text-2xl font-bold mb-4">Tetris Commands</h2>
-              <div className="space-y-2">
-                <div>/left - Move piece left</div>
-                <div>/right - Move piece right</div>
-                <div>/down - Move piece down faster</div>
-                <div>/rotate - Rotate piece</div>
-                <div>/pause - Pause/unpause game</div>
-                <div>/reset - Start new game</div>
-                <div>/help - Show this menu</div>
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm"
+          >
+            <motion.div 
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.9 }}
+              className="bg-white dark:bg-[#2D1B4B] rounded-xl overflow-hidden shadow-2xl max-w-md w-full mx-4 max-h-[80vh] flex flex-col"
+            >
+              <div className="p-6 overflow-y-auto flex-grow">
+                <h2 className="text-2xl font-bold mb-4 text-purple-800 dark:text-[#F9DC34]">Available Commands:</h2>
+                <div className="space-y-1 mb-6">
+                  <div className="bg-purple-50 dark:bg-purple-900/20 p-3 rounded-lg border-l-4 border-[#F5A623]">
+                    <span className="font-bold text-purple-700 dark:text-purple-300">/play</span>{" "}
+                    <span className="text-blue-600 dark:text-blue-300">[notes]</span>
+                    <p className="mt-1 text-gray-600 dark:text-gray-300">Play a sequence of musical notes (e.g., /play D A B)</p>
+                  </div>
+                  
+                  <div className="bg-purple-50 dark:bg-purple-900/20 p-3 rounded-lg border-l-4 border-[#F5A623]">
+                    <span className="font-bold text-purple-700 dark:text-purple-300">/listen</span>
+                    <p className="mt-1 text-gray-600 dark:text-gray-300">Listen to the original musical sequence again</p>
+                  </div>
+                  
+                  <div className="bg-purple-50 dark:bg-purple-900/20 p-3 rounded-lg border-l-4 border-[#F5A623]">
+                    <span className="font-bold text-purple-700 dark:text-purple-300">/reset</span>
+                    <p className="mt-1 text-gray-600 dark:text-gray-300">Reset the level to its initial state</p>
+                  </div>
+
+                  <div className="bg-purple-50 dark:bg-purple-900/20 p-3 rounded-lg border-l-4 border-[#F5A623]">
+                    <span className="font-bold text-purple-700 dark:text-purple-300">/theme</span>{" "}
+                    <span className="text-blue-600 dark:text-blue-300">[dark|light]</span>
+                    <p className="mt-1 text-gray-600 dark:text-gray-300">Change the theme to dark or light.</p>
+                  </div>
+                  
+                  <div className="bg-purple-50 dark:bg-purple-900/20 p-3 rounded-lg border-l-4 border-[#F5A623]">
+                    <span className="font-bold text-purple-700 dark:text-purple-300">/help</span>
+                    <p className="mt-1 text-gray-600 dark:text-gray-300">Show this help menu.</p>
+                  </div>
+                </div>
+                
+                <h3 className="text-xl font-bold mb-2 text-purple-800 dark:text-[#F9DC34]">How to Play:</h3>
+                <ul className="list-disc pl-5 space-y-1 text-gray-600 dark:text-gray-300">
+                  <li>Listen to the musical sequence carefully</li>
+                  <li>Use /play command to replay the sequence you remember</li>
+                  <li>Notes are: A, B, C, D, E, F, G</li>
+                  <li>Enter notes in the exact order you heard them</li>
+                </ul>
+                
+                <h3 className="text-xl font-bold mt-4 mb-2 text-purple-800 dark:text-[#F9DC34]">Hint:</h3>
+                <p className="text-gray-600 dark:text-gray-300 italic">
+                  Pay close attention to the sequence. You might want to write down the notes as you hear them! you can play one note at a time (/play C)
+                </p>
               </div>
-              <button 
-                onClick={() => setHelpModalOpen(false)}
-                className="mt-4 bg-purple-500 text-white px-4 py-2 rounded"
-              >
-                Close
-              </button>
+              
+              <div className="bg-purple-50 dark:bg-purple-900/30 px-6 py-4 text-center">
+                <button
+                  onClick={() => setHelpModalOpen(false)}
+                  className="bg-gradient-to-r from-[#F9DC34] to-[#F5A623] hover:from-[#FFE55C] hover:to-[#FFBD4A] px-6 py-2 rounded-lg text-purple-900 font-medium shadow-md transition-transform hover:scale-105"
+                >
+                  Close
+                </button>
+              </div>
             </motion.div>
           </motion.div>
         )}
@@ -362,4 +350,4 @@ const CommandTetris = ({ levelNumber, onComplete, nextLevelNumber }) => {
   );
 };
 
-export default CommandTetris;
+export default Level15;

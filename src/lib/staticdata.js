@@ -1,4 +1,4 @@
-const maxLevel = 14;
+const maxLevel = 15;
 const startTimes = {
   1: 1741071000,
   2: 1741071000,
@@ -14,7 +14,7 @@ const startTimes = {
   12: 1741152600,
   13: 1741156200,
   14: 1741120200,
-  15: 1709022600,
+  15: 1741123800,
   16: 1709026200
 };
 const levelWeightage = {
