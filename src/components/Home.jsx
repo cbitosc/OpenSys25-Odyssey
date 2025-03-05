@@ -124,7 +124,7 @@ const Home = () => {
                 </Link>
               ) : (
                 <div className="text-center py-6 text-xl font-semibold text-[#F9DC34]">
-                  {userDet?.CL > 16 ? (
+                  {userDet?.CL > 15 ? (
                     <span>Congratulations on completing The Odyssey!</span>
                   ) : (
                     <span>Stay tuned! More levels will be available soon.</span>
