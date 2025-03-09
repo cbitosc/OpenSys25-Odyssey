@@ -5,6 +5,9 @@ import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/solid";
 import { signIn } from "next-auth/react";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { FcGoogle } from "react-icons/fc";
+import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
+import { auth } from "../../firebase";
 
 function Login() {
   const [email, setEmail] = useState("");
@@ -12,6 +15,7 @@ function Login() {
   const [error, setError] = useState(null);
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   const handleKeyPress = (e) => {
     if (e.key === "Enter") {
@@ -34,6 +38,33 @@ function Login() {
       setError("Login failed. Please check your credentials.");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setError(null);
+    setIsGoogleLoading(true);
+    
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      
+      const user = result.user;
+      
+      await signIn("credentials", {
+        uid: user.uid,
+        email: user.email,
+        name: user.displayName,
+        image: user.photoURL,
+        isFirebaseGoogleUser: true,
+        redirect: true,
+        callbackUrl: "/",
+      });
+      
+    } catch (err) {
+      console.error("Google login error:", err);
+      setError("Google login failed. Please try again.");
+      setIsGoogleLoading(false);
     }
   };
 
@@ -118,6 +149,31 @@ function Login() {
                 </>
               ) : (
                 "Login"
+              )}
+            </button>
+            
+            <div className="relative flex items-center py-2">
+              <div className="flex-grow border-t border-purple-400/30"></div>
+              <span className="flex-shrink mx-4 text-purple-300">or</span>
+              <div className="flex-grow border-t border-purple-400/30"></div>
+            </div>
+            
+            <button
+              type="button"
+              disabled={isGoogleLoading}
+              className="w-full py-3 px-4 bg-white hover:bg-gray-100 text-gray-800 font-medium rounded-lg shadow-lg transform transition-all duration-200 hover:scale-105 disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center"
+              onClick={handleGoogleLogin}
+            >
+              {isGoogleLoading ? (
+                <>
+                  <span className="w-5 h-5 mr-3 rounded-full border-2 border-t-purple-900 border-purple-900/30 animate-spin"></span>
+                  Connecting...
+                </>
+              ) : (
+                <>
+                  <FcGoogle className="w-5 h-5 mr-3" />
+                  Continue with Google
+                </>
               )}
             </button>
           </div>

@@ -13,6 +13,15 @@ const handler = NextAuth({
       credentials: {},
       async authorize(credentials) {
         try {
+          if (credentials.isFirebaseGoogleUser) {
+            return {
+              id: credentials.uid,
+              email: credentials.email,
+              name: credentials.name,
+              image: credentials.image,
+            };
+          }
+        
           const userCredential = await signInWithEmailAndPassword(
             auth,
             credentials.email || "",
@@ -20,7 +29,12 @@ const handler = NextAuth({
           );
           
           if (userCredential.user) {
-            return userCredential.user;
+            return {
+              id: userCredential.user.uid,
+              email: userCredential.user.email,
+              name: userCredential.user.displayName,
+              image: userCredential.user.photoURL,
+            };
           }
           return null;
         } catch (error) {
@@ -30,6 +44,20 @@ const handler = NextAuth({
       },
     }),
   ],
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.uid = user.id;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (token) {
+        session.user.id = token.uid;
+      }
+      return session;
+    },
+  },
   session: {
     strategy: "jwt",
   },
