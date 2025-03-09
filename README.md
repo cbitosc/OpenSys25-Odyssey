@@ -1,1 +1,1 @@
-### OpenSys'25 Odyssey
+### Odyssey 2025
