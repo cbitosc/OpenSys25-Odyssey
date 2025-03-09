@@ -6,12 +6,10 @@ import { HelpCircle, ArrowRight, Book, RotateCcw } from "lucide-react";
 import { useToast } from "../ui/use-toast";
 
 const Level7 = ({ onComplete }) => {
-  // Game constants
   const startWord = "COLD";
   const targetWord = "WARM";
   const nextLevelNumber = 8;
   
-  // State management
   const [inputValue, setInputValue] = useState("");
   const [currentWord, setCurrentWord] = useState(startWord);
   const [isHelpModalOpen, setHelpModalOpen] = useState(false);
@@ -73,11 +71,9 @@ const Level7 = ({ onComplete }) => {
     "YARD", "YARN", "YEAR", "YELL", "YOGA", "YOUR", "ZERO", "ZONE"
   ]));
 
-  // Hooks
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
 
-  // Game logic functions
   const isValidWord = (word) => {
     return dictionary.has(word.toUpperCase());
   };
@@ -91,7 +87,6 @@ const Level7 = ({ onComplete }) => {
     return differences === 1;
   };
 
-  // Success effect - triggers level completion
   useEffect(() => {
     if (isSuccess) {
       toast({
@@ -107,7 +102,6 @@ const Level7 = ({ onComplete }) => {
     }
   }, [isSuccess, nextLevelNumber, onComplete, toast]);
 
-  // Command handling
   const handleInputChange = (e) => {
     setInputValue(e.target.value);
   };
@@ -346,7 +340,6 @@ const Level7 = ({ onComplete }) => {
         </button>
       </motion.div>
 
-      {/* Help Modal */}
       <AnimatePresence>
         {isHelpModalOpen && (
           <motion.div 

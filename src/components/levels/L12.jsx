@@ -205,7 +205,6 @@ const TimekeepersLevel = ({ levelNumber, onComplete, nextLevelNumber }) => {
         </button>
       </motion.div>
 
-      {/* Help Modal */}
       <AnimatePresence>
         {isHelpModalOpen && (
           <motion.div 

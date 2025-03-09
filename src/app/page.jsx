@@ -4,7 +4,6 @@ import { Suspense } from "react";
 import { useSession } from "next-auth/react";
 import dynamic from "next/dynamic";
 
-// Create a reusable loading component with the new theme
 const LoadingScreen = () => (
   <div className="flex items-center justify-center w-full h-screen bg-gradient-to-b from-[#2D1B4B] to-[#1A0F2E]">
     <div className="backdrop-blur-md bg-white/5 rounded-xl p-8 shadow-lg border border-purple-300/20 flex flex-col items-center">

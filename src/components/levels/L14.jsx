@@ -10,10 +10,9 @@ import { useToast } from "../ui/use-toast";
 const BOARD_SIZE = 20;
 const CELL_SIZE = 20;
 const INITIAL_SNAKE_SPEED = 200; // milliseconds
-const SUCCESS_SCORE = 60; // Score to trigger success
+const SUCCESS_SCORE = 60; 
 
 const CommandSnake = ({ levelNumber, onComplete, nextLevelNumber }) => {
-  // Game state
   const [snake, setSnake] = useState([
     { x: 10, y: 10 },
     { x: 9, y: 10 },
@@ -26,17 +25,14 @@ const CommandSnake = ({ levelNumber, onComplete, nextLevelNumber }) => {
   const [isPaused, setIsPaused] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  // Input and UI state
   const [inputValue, setInputValue] = useState("");
   const [isHelpModalOpen, setHelpModalOpen] = useState(false);
   const [message, setMessage] = useState("Welcome to Command Snake!");
 
-  // Refs and hooks
   const gameLoopRef = useRef(null);
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
 
-  // Generate food position
   const generateFood = useCallback(() => {
     let newFood;
     do {
@@ -50,7 +46,6 @@ const CommandSnake = ({ levelNumber, onComplete, nextLevelNumber }) => {
     return newFood;
   }, [snake]);
 
-  // Initialize game
   const initializeGame = useCallback(() => {
     setSnake([
       { x: 10, y: 10 },
@@ -65,7 +60,6 @@ const CommandSnake = ({ levelNumber, onComplete, nextLevelNumber }) => {
     setIsSuccess(false);
   }, [generateFood]);
 
-  // Move snake
   const moveSnake = useCallback(() => {
     if (isGameOver || isPaused || isSuccess) return;
 
@@ -73,7 +67,6 @@ const CommandSnake = ({ levelNumber, onComplete, nextLevelNumber }) => {
       const newSnake = [...prevSnake];
       const head = { ...newSnake[0] };
 
-      // Move head based on direction
       switch (direction) {
         case 'UP':
           head.y = (head.y - 1 + BOARD_SIZE) % BOARD_SIZE;
@@ -89,7 +82,6 @@ const CommandSnake = ({ levelNumber, onComplete, nextLevelNumber }) => {
           break;
       }
 
-      // Check self-collision
       if (newSnake.slice(1).some(segment => 
         segment.x === head.x && segment.y === head.y
       )) {
@@ -97,23 +89,18 @@ const CommandSnake = ({ levelNumber, onComplete, nextLevelNumber }) => {
         return prevSnake;
       }
 
-      // Unshift new head
       newSnake.unshift(head);
 
-      // Check food collision
       if (head.x === food.x && head.y === food.y) {
-        // Grow snake and generate new food
         setFood(generateFood());
         const newScore = score + 10;
         setScore(newScore);
 
-        // Check for success condition
         if (newScore >= SUCCESS_SCORE) {
           setIsSuccess(true);
           onComplete && onComplete();
         }
       } else {
-        // Remove tail if no food eaten
         newSnake.pop();
       }
 
@@ -121,7 +108,6 @@ const CommandSnake = ({ levelNumber, onComplete, nextLevelNumber }) => {
     });
   }, [direction, food, generateFood, isGameOver, isPaused, isSuccess, score, onComplete]);
 
-  // Game loop
   useEffect(() => {
     if (isGameOver || isPaused || isSuccess) return;
 
@@ -129,7 +115,6 @@ const CommandSnake = ({ levelNumber, onComplete, nextLevelNumber }) => {
     return () => clearInterval(gameLoopRef.current);
   }, [moveSnake, isGameOver, isPaused, isSuccess]);
 
-  // Command handling
   const handleInputChange = (e) => {
     setInputValue(e.target.value);
   };
@@ -194,18 +179,15 @@ const CommandSnake = ({ levelNumber, onComplete, nextLevelNumber }) => {
     setInputValue("");
   };
 
-  // Render game board
   const renderBoard = () => {
     const board = Array(BOARD_SIZE).fill().map(() => 
       Array(BOARD_SIZE).fill(0)
     );
 
-    // Mark snake segments
     snake.forEach((segment, index) => {
-      board[segment.y][segment.x] = index === 0 ? 2 : 1; // Head is different
+      board[segment.y][segment.x] = index === 0 ? 2 : 1; 
     });
 
-    // Mark food
     board[food.y][food.x] = 3;
 
     return board.map((row, rowIndex) => (
@@ -213,13 +195,13 @@ const CommandSnake = ({ levelNumber, onComplete, nextLevelNumber }) => {
         {row.map((cell, cellIndex) => {
           let cellClass = "w-4 h-4 sm:w-5 sm:h-5 border border-gray-200";
           switch(cell) {
-            case 1: // Snake body
+            case 1: 
               cellClass += " bg-green-600";
               break;
-            case 2: // Snake head
+            case 2: 
               cellClass += " bg-green-800";
               break;
-            case 3: // Food
+            case 3: 
               cellClass += " bg-red-500";
               break;
             default:
@@ -238,7 +220,6 @@ const CommandSnake = ({ levelNumber, onComplete, nextLevelNumber }) => {
 
   return (
     <div className="flex flex-col items-center mt-4 sm:mt-8 max-w-4xl mx-auto px-4">
-      {/* Game Header */}
       <motion.h1 
         className="px-4 sm:px-6 py-2 sm:py-3 text-xl sm:text-2xl font-bold text-[#2D1B4B] dark:text-[#1A0F2E] bg-gradient-to-r from-[#F9DC34] to-[#F5A623] rounded-full shadow-lg"
       >
@@ -251,7 +232,6 @@ const CommandSnake = ({ levelNumber, onComplete, nextLevelNumber }) => {
         Have Fun! Score 60
       </motion.h1>
 
-      {/* Game Status */}
       <div className="flex items-center justify-between w-full max-w-md mt-2 sm:mt-4">
         <span className="text-base sm:text-lg font-semibold">
           Score: {score}
@@ -273,7 +253,6 @@ const CommandSnake = ({ levelNumber, onComplete, nextLevelNumber }) => {
         )}
       </div>
 
-      {/* Game Board */}
       <div className="mt-2 sm:mt-4 border-4 border-purple-700 dark:border-purple-300 inline-block">
         {renderBoard()}
       </div>
@@ -288,7 +267,6 @@ const CommandSnake = ({ levelNumber, onComplete, nextLevelNumber }) => {
               Type <span className="font-mono bg-purple-100 dark:bg-purple-900/30 px-2 py-1 rounded">/help</span> to get commands and hints
             </motion.span>
 
-      {/* Input Area */}
       <motion.div 
         className="flex gap-2 w-full max-w-md mt-2 sm:mt-4"
       >
@@ -309,7 +287,6 @@ const CommandSnake = ({ levelNumber, onComplete, nextLevelNumber }) => {
         </Button>
       </motion.div>
 
-      {/* Game Help Dialog */}
       <Dialog open={isHelpModalOpen} onOpenChange={setHelpModalOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>

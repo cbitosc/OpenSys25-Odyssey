@@ -174,7 +174,6 @@ const Level8 = ({ levelNumber = 8, onComplete, nextLevelNumber = 9 }) => {
     });
   };
 
-  // Command handling
   const handleInputChange = (e) => {
     setInputValue(e.target.value);
   };
@@ -186,7 +185,6 @@ const Level8 = ({ levelNumber = 8, onComplete, nextLevelNumber = 9 }) => {
   };
 
   const handleCommandSubmit = () => {
-    // Command parsing
     const resetMatch = inputValue.match(/^\/reset$/i);
     const helpMatch = inputValue.match(/^\/help$/i);
     const themeMatch = inputValue.match(/^\/theme\s+(dark|light)$/i);
@@ -226,7 +224,6 @@ const Level8 = ({ levelNumber = 8, onComplete, nextLevelNumber = 9 }) => {
     setInputValue("");
   };
 
-  // Render bar component
   const renderBar = (bar, index) => {
     const barHeight = 150; // Total bar height in pixels
     const markerPosition = gameState.targetPositions[index];
@@ -331,7 +328,6 @@ const Level8 = ({ levelNumber = 8, onComplete, nextLevelNumber = 9 }) => {
         </button>
       </motion.div>
 
-      {/* Help Modal */}
       <AnimatePresence>
         {isHelpModalOpen && (
           <motion.div 

@@ -46,7 +46,6 @@ const Home = () => {
           setUserDet(userVal);
         } else {
           console.log("No user data found, creating default entry");
-          // Initialize the user data if it doesn't exist
           set(userRef, { CL: 1, CS: 0, S: 0 }).then(() => {
             setUserDet({ CL: 1, CS: 0, S: 0 });
             console.log("Default user data created");

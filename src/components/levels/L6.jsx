@@ -322,7 +322,6 @@ const Level6 = ({ onComplete }) => {
         </button>
       </motion.div>
 
-      {/* Help Modal */}
       <AnimatePresence>
         {isHelpModalOpen && (
           <motion.div 

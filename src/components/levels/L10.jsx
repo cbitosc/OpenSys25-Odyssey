@@ -114,7 +114,6 @@ const EightPuzzleLevel = ({ levelNumber, onComplete, nextLevelNumber }) => {
       return;
     }
     
-    // Check if the move is valid (tile is adjacent to empty space)
     const row = Math.floor(tilePos / 3);
     const col = tilePos % 3;
     const emptyRow = Math.floor(emptyPos / 3);
@@ -134,8 +133,6 @@ const EightPuzzleLevel = ({ levelNumber, onComplete, nextLevelNumber }) => {
       });
       return;
     }
-    
-    // Execute the move
     const newBoard = [...board];
     newBoard[emptyPos] = parseInt(tileNumber);
     newBoard[tilePos] = 0;
@@ -147,13 +144,11 @@ const EightPuzzleLevel = ({ levelNumber, onComplete, nextLevelNumber }) => {
     
     setMoveCount(prev => prev + 1);
     
-    // Check if the puzzle is solved after the move
     setTimeout(() => {
       checkWinCondition(newBoard);
     }, 100);
   };
 
-  // Command handling
   const handleInputChange = (e) => {
     setInputValue(e.target.value);
   };
@@ -165,7 +160,6 @@ const EightPuzzleLevel = ({ levelNumber, onComplete, nextLevelNumber }) => {
   };
 
   const handleCommandSubmit = () => {
-    // Command parsing - expand this based on your game's needs
     const resetMatch = inputValue.match(/^\/reset$/i);
     const helpMatch = inputValue.match(/^\/help$/i);
     const themeMatch = inputValue.match(/^\/theme\s+(dark|light)$/i);
@@ -205,7 +199,6 @@ const EightPuzzleLevel = ({ levelNumber, onComplete, nextLevelNumber }) => {
     setInputValue("");
   };
 
-  // Render a single tile
   const renderTile = (value, index) => {
     if (value === 0) {
       return (

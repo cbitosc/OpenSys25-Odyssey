@@ -6,7 +6,6 @@ import { HelpCircle, ArrowRight, Volume2 } from "lucide-react";
 import { useToast } from "../ui/use-toast";
 
 const MorseCodeLevel = ({ levelNumber, onComplete, nextLevelNumber }) => {
-  // State management
   const [inputValue, setInputValue] = useState("");
   const [isHelpModalOpen, setHelpModalOpen] = useState(false);
   const [message, setMessage] = useState("Listen to the Morse code and decode the message!");
@@ -14,14 +13,10 @@ const MorseCodeLevel = ({ levelNumber, onComplete, nextLevelNumber }) => {
   const [currentSignalType, setCurrentSignalType] = useState(null);
   const [isSuccess, setIsSuccess] = useState(false);
   
-  // Hooks
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
   
-  // Audio context
   const audioContextRef = useRef(null);
-  
-  // Define the  code sequence
   const morseSequence = [
     // C
     { type: "dash", duration: 0.3 },
@@ -49,11 +44,8 @@ const MorseCodeLevel = ({ levelNumber, onComplete, nextLevelNumber }) => {
     { type: "dot", duration: 0.1 }
   ];
 
-  // Initialize audio context
   useEffect(() => {
     audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
-    
-    // Auto-play the sequence once when the component loads
     setTimeout(() => {
       playMorseSequence();
     }, 1500);
@@ -65,7 +57,6 @@ const MorseCodeLevel = ({ levelNumber, onComplete, nextLevelNumber }) => {
     };
   }, []);
 
-  // Success effect - triggers level completion
   useEffect(() => {
     if (isSuccess) {
       toast({
@@ -139,7 +130,6 @@ const MorseCodeLevel = ({ levelNumber, onComplete, nextLevelNumber }) => {
     setIsSuccess(false);
   };
 
-  // Command handling
   const handleInputChange = (e) => {
     setInputValue(e.target.value);
   };
@@ -151,7 +141,6 @@ const MorseCodeLevel = ({ levelNumber, onComplete, nextLevelNumber }) => {
   };
 
   const handleCommandSubmit = () => {
-    // Command parsing
     const resetMatch = inputValue.match(/^\/reset$/i);
     const helpMatch = inputValue.match(/^\/help$/i);
     const themeMatch = inputValue.match(/^\/theme\s+(dark|light)$/i);
